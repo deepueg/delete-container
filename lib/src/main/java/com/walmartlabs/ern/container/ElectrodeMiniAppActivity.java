@@ -15,13 +15,18 @@ package com.walmartlabs.ern.container;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 
-public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReactActivityDelegate.BackKeyHandler {
+import com.facebook.react.modules.core.PermissionAwareActivity;
+import com.facebook.react.modules.core.PermissionListener;
+
+public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReactActivityDelegate.BackKeyHandler, PermissionAwareActivity {
 
     private static final String INITIAL_PROPS = "props";
     private ElectrodeReactActivityDelegate mReactActivityDelegate;
@@ -29,8 +34,11 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
     /**
      * Method that helps to pass bundle to react native side.
      *
+     *
+     * @deprecated use
      * @param intent Intent that will start the activity
      * @param bundle Bundle that you would like to pass to react native.
+     *
      */
     public static void addInitialProps(@NonNull Intent intent, @NonNull Bundle bundle) {
         intent.putExtra(INITIAL_PROPS, bundle);
@@ -43,9 +51,9 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mReactActivityDelegate = new ElectrodeReactActivityDelegate();
+        mReactActivityDelegate = new ElectrodeReactActivityDelegate(this);
         mReactActivityDelegate.setBackKeyHandler(this);
-        View reactRootView = mReactActivityDelegate.onCreate(this, getMiniAppName(), getIntent().getBundleExtra(INITIAL_PROPS));
+        View reactRootView = mReactActivityDelegate.createMiniAppRootView(getMiniAppName(), getIntent().getBundleExtra(INITIAL_PROPS));
 
         if (reactRootView != null) {
             setContentView(reactRootView);
@@ -55,19 +63,19 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
     @Override
     protected void onPause() {
         super.onPause();
-        mReactActivityDelegate.onPause(this);
+        mReactActivityDelegate.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mReactActivityDelegate.onResume(this);
+        mReactActivityDelegate.onResume();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mReactActivityDelegate.onDestroy(this);
+        mReactActivityDelegate.onDestroy();
     }
 
     @Override
@@ -87,7 +95,7 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        mReactActivityDelegate.onActivityResult(this, requestCode, resultCode, data);
+        mReactActivityDelegate.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -95,7 +103,7 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
         final boolean isMenuKey = (keyCode == KeyEvent.KEYCODE_MENU);
 
         if (isMenuKey
-                && ElectrodeReactContainer.getInstance().isReactNativeDeveloperSupport()
+                && ElectrodeReactContainer.isReactNativeDeveloperSupport()
                 && mReactActivityDelegate.canShowDeveloperMenu()) {
             mReactActivityDelegate.showDeveloperMenu();
             return true;
@@ -107,5 +115,17 @@ public class ElectrodeMiniAppActivity extends Activity implements ElectrodeReact
     @Override
     public void onBackKey() {
         finish();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void requestPermissions(String[] permissions, int requestCode, PermissionListener listener) {
+        mReactActivityDelegate.requestPermissions(permissions, requestCode, listener);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        mReactActivityDelegate.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }
